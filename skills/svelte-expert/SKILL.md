@@ -41,6 +41,7 @@ Svelte 5 replaces compiler-magic reactivity with explicit **runes**. The mental 
   const count = $derived(items.length);
 </script>
 ```
+> Runnable (state factory + `$derived` / `$derived.by`): [`examples/state-derived.svelte.ts`](./examples/state-derived.svelte.ts)
 
 **`$props` with types and `$bindable` — replaces `export let`:**
 ```svelte
@@ -68,6 +69,7 @@ Svelte 5 replaces compiler-magic reactivity with explicit **runes**. The mental 
 ```
 Use `$effect.pre(() => …)` (same API, runs *before* DOM updates) for the rare case of reading
 layout before a render — e.g. capturing scroll position for autoscroll.
+> Runnable (`$effect` cleanup + `$effect.pre`): [`examples/effect-cleanup.svelte.ts`](./examples/effect-cleanup.svelte.ts)
 
 **Shared state — `.svelte.ts` module, not a store:**
 ```ts
@@ -89,7 +91,7 @@ stay reactive when reassigned elsewhere. Export an **object** (mutate its fields
 
 - **`$:` / `export let` in new code** — Svelte 4 idioms; use `$derived` / `$props`.
 - **`$effect` to derive state** — causes extra passes and stale values; use `$derived`/`$derived.by`.
-- **Effect-driven loops** — an `$effect` that reads and writes the same `$state` loops infinitely. Prefer `$derived`; only if you *must* write state in an effect, read the looping dependency via `untrack(() => …)`.
+- **Effect-driven loops** — an `$effect` that reads and writes the same `$state` loops infinitely. Prefer `$derived`; only if you *must* write state in an effect, read the looping dependency via `untrack(() => …)`. Runnable: [`examples/derived-not-effect.svelte.ts`](./examples/derived-not-effect.svelte.ts).
 - **Writable store for component-local state** — use `$state`; reserve stores for cross-cutting concerns or external (RxJS) interop.
 - **Reassigning whole objects** — breaks fine-grained updates; mutate proxy fields directly.
 - **Unkeyed `{#each}`** — wrong DOM reuse on reorder; always provide `(item.id)`.

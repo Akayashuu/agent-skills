@@ -11,6 +11,8 @@ Verified against each wrapper's published README/API. Every wrapper lists
 pnpm add @vskstudio/takt-core
 ```
 
+> Runnable: [`examples/core-usage.ts`](./examples/core-usage.ts) · typed events: [`examples/typed-events.ts`](./examples/typed-events.ts)
+
 ```ts
 import { init, track } from '@vskstudio/takt-core'
 

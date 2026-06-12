@@ -37,19 +37,14 @@ Modern Angular (v20+, current stable v22 as of mid-2026) is a different framewor
 **Signal inputs/outputs over decorators** — reactive, typed, no lifecycle gymnastics:
 ```ts
 // ❌ decorator inputs: not reactive, need ngOnChanges to derive
-@Component({ selector: 'app-greet' })
-export class Greet {
-  @Input() name = '';
-  @Output() saved = new EventEmitter<string>();
-}
+@Input() name = '';
+@Output() saved = new EventEmitter<string>();
 // ✅ signal inputs compose with computed; output() is leaner
-@Component({ selector: 'app-greet', standalone: true })
-export class Greet {
-  name = input.required<string>();
-  upper = computed(() => this.name().toUpperCase());
-  saved = output<string>();
-}
+name = input.required<string>();
+upper = computed(() => this.name().toUpperCase());
+saved = output<string>();
 ```
+> Runnable: [`examples/signal-inputs-outputs.ts`](./examples/signal-inputs-outputs.ts)
 
 **`inject()` over constructor injection** — works in functions, base classes, and factories:
 ```ts
@@ -69,6 +64,7 @@ private route = inject(ActivatedRoute);
   @if (u.active) { <span>{{ u.name }}</span> }
 } @empty { <p>No users</p> }
 ```
+> Runnable: [`examples/control-flow.ts`](./examples/control-flow.ts) (the block in a `@Component` template)
 
 **OnPush + signals** — reading a signal in the template registers it as a dependency; updating it schedules a re-render with no manual `markForCheck()`. This is exactly the model zoneless (default in v21+) relies on, so `OnPush` everywhere makes a codebase zoneless-ready. Don't call functions in templates (they run every CD cycle); expose a `computed()` instead:
 ```ts
@@ -89,6 +85,7 @@ user = toSignal(this.route.params.pipe(
   takeUntilDestroyed(),
 ));
 ```
+> Runnable: [`examples/rxjs-to-signal.ts`](./examples/rxjs-to-signal.ts)
 
 **`resource()` for async reads, `linkedSignal()` for resettable derived state** — both stable (v22 / v20):
 ```ts
@@ -100,6 +97,7 @@ user = resource({ params: () => ({ id: this.userId() }), loader: ({ params }) =>
 // yet the user can still .set() a choice. computed() can't be written; an effect() would be a hack.
 selected = linkedSignal(() => this.options()[0]);
 ```
+> Runnable: [`examples/resource-linked-signal.ts`](./examples/resource-linked-signal.ts)
 
 **`@defer` to shrink the initial bundle** — lazy-load a component's chunk on a trigger, no router needed:
 ```html
@@ -107,6 +105,8 @@ selected = linkedSignal(() => this.options()[0]);
   <app-heavy-chart [data]="data()" />
 } @placeholder { <app-skeleton /> } @loading (after 100ms) { <app-spinner /> } @error { <p>Failed</p> }
 ```
+> Runnable: [`examples/defer.ts`](./examples/defer.ts)
+
 Triggers: `idle` (default), `viewport`, `interaction`, `hover`, `timer(…)`, `immediate`, `when <expr>`. Add `prefetch on hover` to warm the chunk early.
 
 ## Common Mistakes

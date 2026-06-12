@@ -66,7 +66,7 @@ const user = await getUser()
 <style define:vars={{ accent: user.color }}>a { color: var(--accent) }</style>
 ```
 
-**Content collections (Astro 5 Content Layer) — a `loader` feeds a typed, validated collection.** Config lives at `src/content.config.ts` (no longer `src/content/config.ts`), and entries have an `id` (the old `slug` is gone). See [`content.config.ts`](./content.config.ts) for a full copy-paste config with `glob()`, images, and `reference()`.
+**Content collections (Astro 5 Content Layer) — a `loader` feeds a typed, validated collection.** Config lives at `src/content.config.ts` (no longer `src/content/config.ts`), and entries have an `id` (the old `slug` is gone).
 ```ts
 // src/content.config.ts
 import { defineCollection, z } from 'astro:content'
@@ -77,6 +77,7 @@ const blog = defineCollection({
 })
 export const collections = { blog }
 ```
+> Runnable: [`examples/blog-collection.ts`](./examples/blog-collection.ts) (full config — `glob()`, `image()`, `reference()`) and [`examples/file-loader.ts`](./examples/file-loader.ts) (`file()` for one file holding many entries).
 ```astro
 ---
 import { getCollection } from 'astro:content'

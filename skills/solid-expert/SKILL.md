@@ -47,13 +47,10 @@ function Counter() {
   const doubled = count() * 2          // runs once, frozen
   return <p>{doubled}</p>
 }
-// ✅ read inside JSX (a tracking scope) or a memo
-function Counter() {
-  const [count, setCount] = createSignal(0)
-  const doubled = createMemo(() => count() * 2)
-  return <p onClick={() => setCount(count() + 1)}>{doubled()}</p>
-}
+// ✅ read inside JSX (a tracking scope) or a memo — see runnable example
 ```
+
+> Runnable: [`examples/counter.tsx`](./examples/counter.tsx)
 
 **`<For>` over `.map()` — keyed by reference, rows persist instead of re-creating:**
 ```tsx
@@ -66,20 +63,22 @@ function Counter() {
 
 **`createStore` for nested objects — fine-grained, only touched paths update:**
 ```tsx
-const [state, setState] = createStore({ user: { name: 'Ada', tags: ['a'] } })
 setState('user', 'name', 'Grace')              // path setter, surgical
 setState('user', 'tags', produce(t => t.push('b'))) // mutate-style via produce
 ```
+
+> Runnable: [`examples/store-nested.ts`](./examples/store-nested.ts)
 
 **`createResource` for async — the idiomatic data fetch, not `fetch` in an effect:**
 ```tsx
 // source is a signal/accessor; when it changes (and isn't false/null/undefined)
 // the fetcher re-runs. Returns [resource, { mutate, refetch }].
 const [user] = createResource(userId, (id) => fetch(`/u/${id}`).then(r => r.json()))
-return <Show when={!user.loading} fallback={<Spinner />}>
-  <p>{user()?.name}</p>            {/* user() is the data; .loading / .error are reactive */}
-</Show>
+// user() is the data; .loading / .error are reactive
 ```
+
+> Runnable: [`examples/resource-fetch.tsx`](./examples/resource-fetch.tsx)
+
 `mutate(v)` writes optimistically; `refetch()` reloads. Pairs with `<Suspense>` and `<ErrorBoundary>`.
 
 ## Common Mistakes

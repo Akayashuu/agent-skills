@@ -34,37 +34,26 @@ function Cart({ items }: { items: Item[] }) {
   return <p>{total}</p>
 }
 // ✅ it's just a value; compute it. Wrap in useMemo only if profiling says so.
-function Cart({ items }: { items: Item[] }) {
-  const total = items.reduce((s, i) => s + i.price, 0)
-  return <p>{total}</p>
-}
+const total = items.reduce((s, i) => s + i.price, 0)
 ```
+> Runnable: [`examples/derive-during-render.tsx`](./examples/derive-during-render.tsx)
 
 **Reset state on identity change with `key`, not an effect.** Changing the `key` remounts the subtree, discarding old state — no manual resync:
 ```tsx
 // ❌ effect to "reset form when user changes" — stale between switch and effect
-function Profile({ userId }: { userId: string }) {
-  const [draft, setDraft] = useState('')
-  useEffect(() => { setDraft('') }, [userId])
-  return <textarea value={draft} onChange={e => setDraft(e.target.value)} />
-}
+useEffect(() => { setDraft('') }, [userId])
 // ✅ a different user is a different form; let React remount it
-function Profile({ userId }: { userId: string }) {
-  return <ProfileForm key={userId} />
-}
+<ProfileForm key={userId} />
 ```
+> Runnable: [`examples/reset-with-key.tsx`](./examples/reset-with-key.tsx)
 
 **Effects are for external systems — and must clean up to dodge races.** Anything async needs an ignore flag or `AbortController`, which is exactly why a data library is better:
 ```tsx
 // ❌ no cleanup: a slow earlier request resolves last and overwrites the new one
 useEffect(() => { fetch(`/api/u/${id}`).then(r => r.json()).then(setUser) }, [id])
 // ✅ ignore stale resolutions (or just use TanStack Query / an RSC loader)
-useEffect(() => {
-  let active = true
-  fetch(`/api/u/${id}`).then(r => r.json()).then(u => { if (active) setUser(u) })
-  return () => { active = false }
-}, [id])
 ```
+> Runnable: [`examples/abortable-effect-fetch.tsx`](./examples/abortable-effect-fetch.tsx)
 
 **Composition kills prop-drilling before context does.** Pass rendered UI as `children` so intermediate components never see props they only forward:
 ```tsx
@@ -79,11 +68,12 @@ useEffect(() => {
 const onConnected = useEffectEvent(() => log('connected', theme)) // reads latest theme
 useEffect(() => {
   const conn = createConnection(roomId)
-  conn.on('connected', onConnected)
+  conn.on('connected', () => onConnected())
   conn.connect()
   return () => conn.disconnect()
 }, [roomId]) // re-runs on roomId only; theme change does NOT reconnect
 ```
+> Runnable: [`examples/use-effect-event.tsx`](./examples/use-effect-event.tsx)
 
 **Memoize for referential stability, not "speed."** A `useCallback`/`useMemo` matters when its result is a dependency of a memoized child or another hook — otherwise it's noise that adds its own cost:
 ```tsx
@@ -107,7 +97,7 @@ const onSelect = useCallback((id: string) => dispatch(select(id)), [dispatch]) /
 
 Local, cheap, self-contained UI state (a toggle, an input) needs no reducer, no context, no memo. Reach for `useReducer`, context splitting, or a data library when state is shared, complex, or async — not preemptively. In React 19 (stable), prefer the platform: `use` to unwrap promises/context, `<form>` Actions + `useActionState` for submission and pending UI, `useOptimistic` for optimistic updates, ref-as-prop (no more `forwardRef`), and Server Components to fetch on the server so the client ships less and avoids effect-based fetching entirely. Don't hand-roll what the framework now does.
 
-See `patterns.tsx` for compilable snippets: an abortable effect fetch done right, deriving state during render, and a correct `useEffectEvent`.
+See `examples/` for self-contained, compiling versions of each pattern above (and `patterns.tsx` for the same three combined in one module).
 
 ## Sources
 

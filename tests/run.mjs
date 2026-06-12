@@ -4,7 +4,7 @@
 // Exits non-zero on any FAIL. Skips are explicit and printed with a reason.
 
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, cpSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, cpSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,6 +29,7 @@ function runTsc(label, { files, compilerOptions, extraDir }) {
   const dir = join(work, label);
   mkdirSync(dir, { recursive: true });
   for (const f of files) {
+    mkdirSync(dirname(join(dir, f.dest)), { recursive: true });
     cpSync(f.src, join(dir, f.dest));
   }
   if (extraDir) cpSync(extraDir, dir, { recursive: true });
@@ -54,15 +55,30 @@ function runTsc(label, { files, compilerOptions, extraDir }) {
 
 const A = (sub) => join(skills, sub);
 
+// Collect a skill's extracted examples (files under skills/<skill>/examples/) matching exts,
+// as { src, dest } pairs with dest preserving the examples/ prefix. Empty if the dir is absent.
+function examples(skill, exts) {
+  const dir = A(`${skill}/examples`);
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((f) => exts.some((e) => f.endsWith(e)))
+    .sort()
+    .map((f) => ({ src: join(dir, f), dest: `examples/${f}` }));
+}
+
 // 1. typescript-expert — plain tsc, strict, using the skill's own tsconfig.base.json.
 {
   const dir = join(work, 'typescript-expert');
-  mkdirSync(dir, { recursive: true });
+  mkdirSync(join(dir, 'examples'), { recursive: true });
   cpSync(A('typescript-expert/types.ts'), join(dir, 'types.ts'));
   cpSync(A('typescript-expert/tsconfig.base.json'), join(dir, 'tsconfig.base.json'));
+  // package.json "type":"module" so NodeNext resolves the examples' `../types.js` specifier to types.ts.
+  writeFileSync(join(dir, 'package.json'), JSON.stringify({ type: 'module' }));
+  const tsExamples = examples('typescript-expert', ['.ts']);
+  for (const f of tsExamples) cpSync(f.src, join(dir, f.dest));
   writeFileSync(
     join(dir, 'tsconfig.json'),
-    JSON.stringify({ extends: './tsconfig.base.json', compilerOptions: { noEmit: true, declaration: false, sourceMap: false }, include: ['types.ts'] }, null, 2),
+    JSON.stringify({ extends: './tsconfig.base.json', compilerOptions: { noEmit: true, declaration: false, sourceMap: false }, include: ['types.ts', ...tsExamples.map((f) => f.dest)] }, null, 2),
   );
   try {
     execFileSync(tsc, ['-p', join(dir, 'tsconfig.json')], { cwd: here, stdio: 'pipe', encoding: 'utf8' });
@@ -75,7 +91,7 @@ const A = (sub) => join(skills, sub);
 
 // 2. react-expert — @types/react, jsx: react-jsx.
 runTsc('react-expert', {
-  files: [{ src: A('react-expert/patterns.tsx'), dest: 'patterns.tsx' }],
+  files: [{ src: A('react-expert/patterns.tsx'), dest: 'patterns.tsx' }, ...examples('react-expert', ['.ts', '.tsx'])],
   compilerOptions: {
     strict: true, target: 'ES2022', module: 'ESNext', moduleResolution: 'bundler',
     lib: ['ES2022', 'DOM', 'DOM.Iterable'], jsx: 'react-jsx',
@@ -84,7 +100,7 @@ runTsc('react-expert', {
 
 // 3. vue-expert — vue; ES2020 / ES2020+DOM / bundler.
 runTsc('vue-expert', {
-  files: [{ src: A('vue-expert/useExample.ts'), dest: 'useExample.ts' }],
+  files: [{ src: A('vue-expert/useExample.ts'), dest: 'useExample.ts' }, ...examples('vue-expert', ['.ts'])],
   compilerOptions: {
     strict: true, target: 'ES2020', module: 'ESNext', moduleResolution: 'bundler',
     lib: ['ES2020', 'DOM', 'DOM.Iterable'],
@@ -93,7 +109,7 @@ runTsc('vue-expert', {
 
 // 4. solid-expert — solid-js; jsx preserve + jsxImportSource solid-js.
 runTsc('solid-expert', {
-  files: [{ src: A('solid-expert/primitives.ts'), dest: 'primitives.ts' }],
+  files: [{ src: A('solid-expert/primitives.ts'), dest: 'primitives.ts' }, ...examples('solid-expert', ['.ts', '.tsx'])],
   compilerOptions: {
     strict: true, target: 'ES2022', module: 'ESNext', moduleResolution: 'bundler',
     lib: ['ES2022', 'DOM', 'DOM.Iterable'], jsx: 'preserve', jsxImportSource: 'solid-js',
@@ -102,7 +118,7 @@ runTsc('solid-expert', {
 
 // 5. angular-expert — standard (TC39) decorators, NO experimentalDecorators, strict.
 runTsc('angular-expert', {
-  files: [{ src: A('angular-expert/patterns.ts'), dest: 'patterns.ts' }],
+  files: [{ src: A('angular-expert/patterns.ts'), dest: 'patterns.ts' }, ...examples('angular-expert', ['.ts'])],
   compilerOptions: {
     strict: true, target: 'ES2022', module: 'ESNext', moduleResolution: 'bundler',
     lib: ['ES2022', 'DOM', 'DOM.Iterable'],
@@ -117,14 +133,20 @@ runTsc('angular-expert', {
   try {
     const { compileModule } = await import('svelte/compiler');
     const ts = await import('typescript');
-    const srcTs = readFileSync(A('svelte-expert/shared.svelte.ts'), 'utf8');
-    // Strip TS types -> JS, preserving rune calls, then let svelte validate the runes.
-    const js = ts.default.transpileModule(srcTs, {
-      compilerOptions: { target: ts.default.ScriptTarget.ESNext, module: ts.default.ModuleKind.ESNext },
-    }).outputText;
-    const { js: out } = compileModule(js, { filename: 'shared.svelte.js', generate: 'client' });
-    if (!out || !out.code) throw new Error('svelte compileModule produced no output');
-    record('svelte-expert', 'PASS', 'svelte compileModule (runes) after TS strip');
+    const mods = [
+      { src: A('svelte-expert/shared.svelte.ts'), name: 'shared.svelte.js' },
+      ...examples('svelte-expert', ['.svelte.ts']).map((f) => ({ src: f.src, name: f.dest.replace(/\.ts$/, '.js') })),
+    ];
+    for (const m of mods) {
+      const srcTs = readFileSync(m.src, 'utf8');
+      // Strip TS types -> JS, preserving rune calls, then let svelte validate the runes.
+      const js = ts.default.transpileModule(srcTs, {
+        compilerOptions: { target: ts.default.ScriptTarget.ESNext, module: ts.default.ModuleKind.ESNext },
+      }).outputText;
+      const { js: out } = compileModule(js, { filename: m.name, generate: 'client' });
+      if (!out || !out.code) throw new Error(`svelte compileModule produced no output for ${m.name}`);
+    }
+    record('svelte-expert', 'PASS', `svelte compileModule (runes) — ${mods.length} module(s)`);
   } catch (e) {
     record('svelte-expert', 'FAIL', String(e.message || e).split('\n').slice(0, 8).join('\n      '));
   }
@@ -136,8 +158,10 @@ runTsc('angular-expert', {
 //    astro/client + an ambient shim for the virtual modules, proving the zod schema typechecks.
 {
   const dir = join(work, 'astro-expert');
-  mkdirSync(dir, { recursive: true });
+  mkdirSync(join(dir, 'examples'), { recursive: true });
   cpSync(A('astro-expert/content.config.ts'), join(dir, 'content.config.ts'));
+  const astroExamples = examples('astro-expert', ['.ts']);
+  for (const f of astroExamples) cpSync(f.src, join(dir, f.dest));
   // Ambient declarations for Astro's virtual modules (mirrors what `astro sync` generates).
   writeFileSync(
     join(dir, 'astro-virtual.d.ts'),
@@ -168,7 +192,7 @@ runTsc('angular-expert', {
           lib: ['ES2022', 'DOM', 'DOM.Iterable'],
           types: [],
         },
-        include: ['content.config.ts', 'astro-virtual.d.ts'],
+        include: ['content.config.ts', 'astro-virtual.d.ts', ...astroExamples.map((f) => f.dest)],
       },
       null, 2,
     ),
@@ -208,6 +232,24 @@ runTsc('angular-expert', {
     } else {
       record('takt-expert', 'PASS', `${pkgs.length} @vskstudio/takt-* packages exist on npm`);
     }
+  }
+}
+
+// 8b. takt-expert examples — plain-TS core usage type-checked against @vskstudio/takt-core.
+{
+  const taktExamples = examples('takt-expert', ['.ts']);
+  if (!taktExamples.length) {
+    // nothing to do
+  } else if (!existsSync(join(here, 'node_modules', '@vskstudio', 'takt-core'))) {
+    record('takt-expert/examples', 'SKIP', 'missing dep: @vskstudio/takt-core');
+  } else {
+    runTsc('takt-expert/examples', {
+      files: taktExamples,
+      compilerOptions: {
+        strict: true, target: 'ES2020', module: 'ESNext', moduleResolution: 'bundler',
+        lib: ['ES2020', 'DOM', 'DOM.Iterable'],
+      },
+    });
   }
 }
 

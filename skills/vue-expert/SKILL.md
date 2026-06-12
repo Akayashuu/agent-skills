@@ -42,12 +42,12 @@ count.value++                // reactive everywhere, reassignable
 **`computed`, not a `watch` that mirrors state:**
 ```ts
 // ❌ watcher duplicates source of truth, runs a tick late, can desync
-const items = ref<Item[]>([])
 const total = ref(0)
 watch(items, (v) => { total.value = v.reduce((n, i) => n + i.price, 0) })
 // ✅ derived, cached, always consistent — no extra ref, no flush timing
 const total = computed(() => items.value.reduce((n, i) => n + i.price, 0))
 ```
+> Runnable: [`examples/computed-vs-watch.ts`](./examples/computed-vs-watch.ts)
 
 **Typed props + emits, one-way data flow:**
 ```ts
@@ -76,6 +76,7 @@ watch(id, async (newId) => {
   data.value = await fetchUser(newId, ctrl.signal)
 })
 ```
+> Runnable: [`examples/watch-cleanup.ts`](./examples/watch-cleanup.ts)
 
 ## Common Mistakes
 

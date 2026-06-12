@@ -38,16 +38,11 @@ type State =
   | { status: 'error'; message: string }
   | { status: 'success'; data: User[] }
 ```
+> Runnable: [`examples/discriminated-union.ts`](./examples/discriminated-union.ts)
 
-**Exhaustiveness — new variants become compile errors, not silent bugs:**
-```ts
-switch (state.status) {
-  case 'loading': return …
-  case 'error':   return …
-  case 'success': return …
-  default: return assertNever(state) // add a variant → error here
-}
-```
+**Exhaustiveness — new variants become compile errors, not silent bugs:** put `default: return assertNever(state)` on a switch over the discriminant; adding a variant turns "forgot a case" into a type error.
+> Runnable: [`examples/exhaustiveness.ts`](./examples/exhaustiveness.ts)
+
 `assertNever`, the `Brand<T,B>` helper, and `Result/ok/err` live in [`types.ts`](./types.ts) — copy it in.
 
 **`satisfies` — check without widening, keep the literal type:**
@@ -55,12 +50,14 @@ switch (state.status) {
 const config = { port: 3000, host: 'localhost' } satisfies Record<string, string | number>
 config.port // still `number`, not `string | number`
 ```
+> Runnable: [`examples/satisfies.ts`](./examples/satisfies.ts)
 
 **`NoInfer<T>` — pin the generic from one argument, only check the other:**
 ```ts
 function on<E extends string>(events: E[], initial: NoInfer<E>) { /* … */ }
 on(['a', 'b'], 'c') // ❌ 'c' can't widen E; must be 'a' | 'b'
 ```
+> Runnable: [`examples/no-infer.ts`](./examples/no-infer.ts)
 
 **`using` — deterministic cleanup, LIFO at scope end, even on throw/early-return:**
 ```ts
@@ -70,8 +67,10 @@ on(['a', 'b'], 'c') // ❌ 'c' can't widen E; must be 'a' | 'b'
 } // disposed lock-then-span here — no try/finally
 ```
 Use `await using` for `Symbol.asyncDispose`. Needs `lib: ["ESNext.Disposable"]`.
+> Runnable: [`examples/using-disposable.ts`](./examples/using-disposable.ts)
 
 **Generics: constrain and infer, don't over-parameterize.** A type parameter used once is usually wrong — it should appear in ≥2 positions (input→output) to relate them. Constrain with `extends` so the body can use the shape.
+> Runnable: [`examples/generics-relate.ts`](./examples/generics-relate.ts)
 
 ## Common Mistakes
 
