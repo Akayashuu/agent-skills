@@ -16,16 +16,16 @@ export function assertNever(value: never, message = "Unexpected value"): never {
  * can't be mixed up. The maker is the single intentional cast.
  *
  *   type UserId = Brand<string, "UserId">;
- *   const UserId = makeBrand<UserId>();
+ *   const UserId = makeBrand<string, "UserId">();
  *   const id = UserId("u_123");   // UserId
  *   takesUserId("u_123");         // ❌ raw string rejected
  */
 declare const __brand: unique symbol;
 export type Brand<T, B extends string> = T & { readonly [__brand]: B };
 
-export function makeBrand<B extends Brand<unknown, string>>() {
+export function makeBrand<T, B extends string>() {
   // The cast is the whole point: validate `raw` here if you want a smart constructor.
-  return (raw: B extends Brand<infer T, string> ? T : never): B => raw as B;
+  return (raw: T): Brand<T, B> => raw as Brand<T, B>;
 }
 
 /**

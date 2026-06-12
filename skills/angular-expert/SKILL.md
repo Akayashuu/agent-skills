@@ -15,7 +15,7 @@ Modern Angular (v20+, current stable v22 as of mid-2026) is a different framewor
 
 | Goal | Do | Avoid |
 |------|----|----|
-| Component packaging | `standalone: true` (default v17+) | `NgModule` declarations |
+| Component packaging | standalone (default v19+; flag implicit) | `NgModule` declarations |
 | Local/derived state | `signal()`, `computed()` | `BehaviorSubject` for plain state |
 | Component inputs | `input()`, `input.required()` | `@Input()` decorator |
 | Component outputs | `output()` | `@Output() new EventEmitter` |
