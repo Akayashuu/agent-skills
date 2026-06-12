@@ -19,9 +19,11 @@ Astro ships **zero JS by default** and renders components to HTML on the server.
 | No SSR-able output (uses `window`) | `client:only="react"` (sparingly) | forcing SSR then guarding `window` |
 | Browser code in a component | `<script>` (bundled, resolves imports) | `<script is:inline>` for bare imports |
 | Server → island data | serializable `props` | passing functions/class instances |
-| Typed markdown/MDX | content collections + Zod schema | raw `fs`/`import.meta.glob` |
+| Typed markdown/MDX | Content Layer `glob()` loader + Zod | raw `fs`/`import.meta.glob` |
 | Re-run JS after View Transition nav | `astro:page-load` listener | `DOMContentLoaded` only |
 | Keep DOM/state across nav | `transition:persist` | re-mounting + restoring manually |
+| Slow per-request widget on a cached page | `server:defer` (server island) | hydrating a client island to fetch |
+| Type-safe client→server mutation | Astro Action (`defineAction` + Zod) | hand-rolled `fetch` to an API route |
 
 ## Core Patterns
 
@@ -64,12 +66,14 @@ const user = await getUser()
 <style define:vars={{ accent: user.color }}>a { color: var(--accent) }</style>
 ```
 
-**Content collections — type-safe frontmatter over globbing:**
+**Content collections (Astro 5 Content Layer) — a `loader` feeds a typed, validated collection.** Config lives at `src/content.config.ts` (no longer `src/content/config.ts`), and entries have an `id` (the old `slug` is gone). See [`content.config.ts`](./content.config.ts) for a full copy-paste config with `glob()`, images, and `reference()`.
 ```ts
 // src/content.config.ts
 import { defineCollection, z } from 'astro:content'
+import { glob } from 'astro/loaders' // glob/file live here, NOT astro:content
 const blog = defineCollection({
-  schema: z.object({ title: z.string(), pubDate: z.date(), draft: z.boolean().default(false) }),
+  loader: glob({ pattern: '**/*.md', base: './src/content/blog' }),
+  schema: z.object({ title: z.string(), pubDate: z.coerce.date(), draft: z.boolean().default(false) }),
 })
 export const collections = { blog }
 ```
@@ -78,6 +82,34 @@ export const collections = { blog }
 import { getCollection } from 'astro:content'
 const posts = await getCollection('blog', ({ data }) => !data.draft) // data is fully typed
 ---
+```
+
+**Server islands (`server:defer`) — defer a slow/personalized fragment without blocking a cached page.** The page ships immediately with the fallback; the island renders on demand and swaps in. Needs an adapter (on-demand rendering):
+```astro
+---
+import Cart from '../components/Cart.astro'
+---
+<!-- ✅ page stays statically cacheable; only this fragment is per-request -->
+<Cart server:defer>
+  <CartSkeleton slot="fallback" />
+</Cart>
+```
+
+**Actions — type-safe, validated server functions callable from the client** (no hand-rolled API route/`fetch`):
+```ts
+// src/actions/index.ts
+import { defineAction } from 'astro:actions'
+import { z } from 'astro:schema'
+export const server = {
+  like: defineAction({
+    input: z.object({ postId: z.string() }),
+    handler: async ({ postId }) => ({ likes: await addLike(postId) }),
+  }),
+}
+```
+```ts
+import { actions } from 'astro:actions'
+const { data, error } = await actions.like({ postId }) // input validated, fully typed
 ```
 
 **View Transitions re-run module scripts but not always your listeners.** With `<ClientRouter />`, navigation swaps the DOM in place — `DOMContentLoaded` fires once, so init code tied to it won't re-run:
@@ -106,3 +138,12 @@ import { ClientRouter } from 'astro:transitions'
 ## When NOT to over-engineer
 
 If a page is content with no interactivity, ship plain `.astro` and **no framework** — don't pull in React just for a layout. Don't add `<ClientRouter />` for SPA feel on a site that's fine as an MPA; the default full-page nav is fast and free. Reach for `client:only` only when SSR genuinely can't run the component, not to avoid a hydration warning. The framework's value is shipping less JS — every directive you add spends that budget.
+
+## Sources
+
+- [Content collections (Content Layer API)](https://docs.astro.build/en/guides/content-collections/)
+- [Server islands (`server:defer`)](https://docs.astro.build/en/guides/server-islands/)
+- [Actions](https://docs.astro.build/en/guides/actions/)
+- [View transitions / `<ClientRouter />` & lifecycle events](https://docs.astro.build/en/guides/view-transitions/)
+- [Template directives (`client:*`, `transition:persist`, `is:inline`)](https://docs.astro.build/en/reference/directives-reference/)
+- [Upgrade to Astro v5 (Content Layer, ClientRouter rename, stable server islands)](https://docs.astro.build/en/guides/upgrade-to/v5/)

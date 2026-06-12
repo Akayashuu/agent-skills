@@ -7,7 +7,9 @@ description: Use when writing, reviewing, or refactoring Angular — standalone 
 
 ## Overview
 
-Modern Angular (v17–19) is a different framework from the NgModule era. State lives in **signals**, components are **standalone**, DI uses the **`inject()`** function, and templates use **`@if`/`@for`/`@switch`**. New code that reaches for `NgModule`, `@Input()` decorators, or `*ngFor` is already legacy. These are the choices the CLI scaffolder won't always make for you.
+Modern Angular (v20+, current stable v22 as of mid-2026) is a different framework from the NgModule era. State lives in **signals**, components are **standalone** (standalone is the default and the `standalone` flag is no longer needed in v19+), DI uses the **`inject()`** function, and templates use **`@if`/`@for`/`@switch`**. New code that reaches for `NgModule`, `@Input()` decorators, or `*ngFor` is already legacy. These are the choices the CLI scaffolder won't always make for you.
+
+**Stability landmarks** (per angular.dev): signals (`signal`/`computed`/`effect`/`linkedSignal`), signal inputs/outputs, and signal queries are **stable since v20**. `resource()` is **stable since v22**; `httpResource()` ships alongside it. **Zoneless** change detection (`provideZonelessChangeDetection()`) is **stable since v20.2 and the default in v21+** — no `zone.js`. `OnPush` is still recommended and expected to become the default.
 
 ## Quick Reference
 
@@ -19,6 +21,9 @@ Modern Angular (v17–19) is a different framework from the NgModule era. State 
 | Component outputs | `output()` | `@Output() new EventEmitter` |
 | Two-way binding | `model()` | manual `@Input()`+`@Output()` pair |
 | Query children | `viewChild()`, `contentChild()` signal queries | `@ViewChild()` decorator |
+| Reset state on input change | `linkedSignal(() => src())` | `effect()` that writes a signal |
+| Async data → signals | `resource()` / `httpResource()` | manual `subscribe` + state flags |
+| Defer heavy/below-fold UI | `@defer (on viewport)` | always eager-loading the chunk |
 | Inject dependencies | `inject(Service)` | constructor params (in fns/base classes) |
 | Conditionals/loops | `@if` / `@for` / `@switch` | `*ngIf` / `*ngFor` / `*ngSwitch` |
 | List rendering | `@for (x of xs; track x.id)` | `@for` without `track` |
@@ -65,7 +70,7 @@ private route = inject(ActivatedRoute);
 } @empty { <p>No users</p> }
 ```
 
-**OnPush + signals** — reading a signal in the template registers it; mutation triggers re-render with no `markForCheck()`. Don't call functions in templates (they run every CD cycle); expose a `computed()` instead:
+**OnPush + signals** — reading a signal in the template registers it as a dependency; updating it schedules a re-render with no manual `markForCheck()`. This is exactly the model zoneless (default in v21+) relies on, so `OnPush` everywhere makes a codebase zoneless-ready. Don't call functions in templates (they run every CD cycle); expose a `computed()` instead:
 ```ts
 // ❌ filtered() runs on every change-detection pass
 get filtered() { return this.items.filter(i => i.active); }
@@ -85,6 +90,25 @@ user = toSignal(this.route.params.pipe(
 ));
 ```
 
+**`resource()` for async reads, `linkedSignal()` for resettable derived state** — both stable (v22 / v20):
+```ts
+// reactive async: re-fetches when userId() changes, cancels stale loads, exposes signals
+user = resource({ params: () => ({ id: this.userId() }), loader: ({ params }) => fetchUser(params.id) });
+// in template: @if (user.isLoading()) {...} @else { {{ user.value()?.name }} }
+
+// linkedSignal: derived BUT writable — resets to first option when options change,
+// yet the user can still .set() a choice. computed() can't be written; an effect() would be a hack.
+selected = linkedSignal(() => this.options()[0]);
+```
+
+**`@defer` to shrink the initial bundle** — lazy-load a component's chunk on a trigger, no router needed:
+```html
+@defer (on viewport) {
+  <app-heavy-chart [data]="data()" />
+} @placeholder { <app-skeleton /> } @loading (after 100ms) { <app-spinner /> } @error { <p>Failed</p> }
+```
+Triggers: `idle` (default), `viewport`, `interaction`, `hover`, `timer(…)`, `immediate`, `when <expr>`. Add `prefetch on hover` to warm the chunk early.
+
 ## Common Mistakes
 
 - **NgModules for new code** — standalone is the default; only touch modules for legacy interop.
@@ -93,8 +117,20 @@ user = toSignal(this.route.params.pipe(
 - **Mutating signal values** — `arr().push(x)` won't notify. Use `.update(a => [...a, x])` / `.set()`.
 - **`*ngFor` without `trackBy`** (or `@for` without `track`) — destroys/recreates DOM, breaks animations and focus.
 - **Decorator inputs in new code** — use `input()` so values flow into `computed`/`effect`.
-- **`effect()` for derived state** — use `computed()`; reserve `effect()` for side effects (logging, DOM, non-Angular APIs).
+- **`effect()` for derived state** — use `computed()` (read-only) or `linkedSignal()` (writable); reserve `effect()` for side effects (logging, DOM, non-Angular APIs).
+- **Relying on `zone.js` in v21+** — it's no longer the default. Avoid patterns that assume Zone auto-detects changes (e.g. mutating fields outside signals after a `setTimeout`); drive UI from signals/`async` pipe instead.
 
 ## When NOT to over-engineer
 
-Not everything needs a signal. A value computed once and never reassigned is a plain `const`. Reach for RxJS only when you have real async/event streams (debounce, retry, combineLatest) — a single HTTP call piped to `toSignal` is fine; a `Subject` to model a boolean isn't. Keep `NgModule` only where a third-party library still requires it.
+Not everything needs a signal. A value computed once and never reassigned is a plain `const`. Reach for RxJS only when you have real async/event streams (debounce, retry, combineLatest) — a single HTTP call piped to `toSignal` (or wrapped in `httpResource`) is fine; a `Subject` to model a boolean isn't. Keep `NgModule` only where a third-party library still requires it.
+
+A copy-pasteable, compilable reference component lives in [`patterns.ts`](./patterns.ts): signal `input()`/`output()`/`model()`, `computed()`, `linkedSignal()`, `inject()`, `resource()`, and a `takeUntilDestroyed()` stream — each annotated with *why*.
+
+## Sources
+
+- [Signals overview](https://angular.dev/guide/signals) — `signal`/`computed`/`effect`
+- [Dependent state with `linkedSignal`](https://angular.dev/guide/signals/linked-signal)
+- [Async with `resource`](https://angular.dev/guide/signals/resource) and [`resource` API](https://angular.dev/api/core/resource) (stable v22)
+- [Zoneless change detection](https://angular.dev/guide/zoneless) (default v21+)
+- [`@defer` deferrable views](https://angular.dev/guide/templates/defer)
+- [Versioning and releases](https://angular.dev/reference/releases) (v22 current as of 2026-06)

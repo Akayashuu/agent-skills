@@ -20,8 +20,11 @@ Idiomatic TypeScript is about **making illegal states unrepresentable** and lett
 | Distinct primitives (ids, tokens) | branded type | bare `string`/`number` |
 | Object shape | `interface` (extensible, faster errors) | `type` for plain objects |
 | Union/mapped/conditional | `type` | `interface` (can't express it) |
-| Import only types | `import type {…}` | value import (breaks tree-shaking) |
+| Import only types | `import type {…}` | value import (emits a phantom runtime import) |
 | Exhaustive switch | `default: assertNever(x)` | no default |
+| Block inference from an arg | `NoInfer<T>` on the slave position | letting a default/fallback widen `T` |
+| Infer literals at the signature | `<const T>` type param | forcing callers to write `as const` |
+| Scoped cleanup (files, locks, spans) | `using` / `await using` | manual `try/finally` |
 
 ## Core Patterns
 
@@ -38,7 +41,6 @@ type State =
 
 **Exhaustiveness — new variants become compile errors, not silent bugs:**
 ```ts
-function assertNever(x: never): never { throw new Error(`unreachable: ${JSON.stringify(x)}`) }
 switch (state.status) {
   case 'loading': return …
   case 'error':   return …
@@ -46,6 +48,7 @@ switch (state.status) {
   default: return assertNever(state) // add a variant → error here
 }
 ```
+`assertNever`, the `Brand<T,B>` helper, and `Result/ok/err` live in [`types.ts`](./types.ts) — copy it in.
 
 **`satisfies` — check without widening, keep the literal type:**
 ```ts
@@ -53,13 +56,20 @@ const config = { port: 3000, host: 'localhost' } satisfies Record<string, string
 config.port // still `number`, not `string | number`
 ```
 
-**Branded types — no more mixing up ids:**
+**`NoInfer<T>` — pin the generic from one argument, only check the other:**
 ```ts
-type UserId = string & { readonly __brand: 'UserId' }
-const asUserId = (s: string) => s as UserId
-function load(id: UserId) {/* … */}
-load('raw') // ❌ compile error; only asUserId(...) passes
+function on<E extends string>(events: E[], initial: NoInfer<E>) { /* … */ }
+on(['a', 'b'], 'c') // ❌ 'c' can't widen E; must be 'a' | 'b'
 ```
+
+**`using` — deterministic cleanup, LIFO at scope end, even on throw/early-return:**
+```ts
+{
+  using span = tracer.start('work') // span[Symbol.dispose]() runs automatically
+  using lock = await mutex.acquire()
+} // disposed lock-then-span here — no try/finally
+```
+Use `await using` for `Symbol.asyncDispose`. Needs `lib: ["ESNext.Disposable"]`.
 
 **Generics: constrain and infer, don't over-parameterize.** A type parameter used once is usually wrong — it should appear in ≥2 positions (input→output) to relate them. Constrain with `extends` so the body can use the shape.
 
@@ -79,4 +89,14 @@ Branded types, deep conditional types, and template-literal type gymnastics have
 
 ## tsconfig baseline
 
-`strict: true` is the floor. Add `noUncheckedIndexedAccess` (arr[i] is `T | undefined`), `exactOptionalPropertyTypes`, and `verbatimModuleSyntax`. These catch real bugs the default strict misses.
+`strict: true` is the floor. Add `noUncheckedIndexedAccess` (`arr[i]` is `T | undefined`), `exactOptionalPropertyTypes` (`x?:` can't be explicitly set to `undefined`), and `verbatimModuleSyntax` (forces `import type`, no phantom runtime imports). These catch real bugs default strict misses. A ready-to-extend [`tsconfig.base.json`](./tsconfig.base.json) is in this dir.
+
+> Versions: `satisfies` (4.9), const type params (5.0), `using`/`await using` (5.2), `NoInfer` (5.4). All stable on the current 5.x/6.x line.
+
+## Sources
+
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/handbook/intro.html) · [Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html) (`NoInfer`)
+- [tsconfig reference](https://www.typescriptlang.org/tsconfig/) — flag semantics
+- [TS 4.9 release notes](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-9.html) — `satisfies`
+- [TS 5.0 release notes](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html) — const type parameters
+- [TS 5.2 release notes](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-2.html) — `using` / explicit resource management

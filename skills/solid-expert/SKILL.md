@@ -22,6 +22,7 @@ The #1 trap is treating Solid like React. **Components run ONCE.** There is no r
 | Nested reactive state | `createStore` + path setters | a signal holding a big object |
 | Explicit dependencies | `on(dep, handler)` | relying on implicit tracking |
 | Opt out of tracking | `untrack(() => …)` | reading then ignoring |
+| Async data | `createResource(source, fetcher)` | manual fetch in `createEffect` |
 
 ## Core Patterns
 
@@ -70,6 +71,17 @@ setState('user', 'name', 'Grace')              // path setter, surgical
 setState('user', 'tags', produce(t => t.push('b'))) // mutate-style via produce
 ```
 
+**`createResource` for async — the idiomatic data fetch, not `fetch` in an effect:**
+```tsx
+// source is a signal/accessor; when it changes (and isn't false/null/undefined)
+// the fetcher re-runs. Returns [resource, { mutate, refetch }].
+const [user] = createResource(userId, (id) => fetch(`/u/${id}`).then(r => r.json()))
+return <Show when={!user.loading} fallback={<Spinner />}>
+  <p>{user()?.name}</p>            {/* user() is the data; .loading / .error are reactive */}
+</Show>
+```
+`mutate(v)` writes optimistically; `refetch()` reloads. Pairs with `<Suspense>` and `<ErrorBoundary>`.
+
 ## Common Mistakes
 
 - **Destructuring props** — the canonical Solid bug. Keep `props` whole; use `mergeProps` for defaults, `splitProps` to forward.
@@ -82,3 +94,19 @@ setState('user', 'tags', produce(t => t.push('b'))) // mutate-style via produce
 ## When NOT to over-engineer
 
 `createMemo` has bookkeeping cost — don't wrap cheap expressions (`a() + b()`); only memo expensive work or values feeding many subscribers. A plain `() => …` derived accessor is often enough. Use `createStore` for genuinely nested state; a single signal is fine for flat values. Reach for `on()`/`untrack`/`batch` only when implicit tracking actually misbehaves, not preemptively.
+
+## Reusable primitives
+
+`primitives.ts` (same dir) — typed, SSR-safe `createPersistedSignal` (localStorage-backed signal, cross-tab sync) and `createEventListener` (auto-cleaned binding). Both use `onCleanup` so listeners die with their owner; copy/adapt rather than re-deriving the lifecycle each time.
+
+## Version note
+
+Stable is **Solid 1.9.x** (everything above targets it). **Solid 2.0** is in beta (`solid-js@next`): async becomes first-class (computations/`createMemo` can return Promises, reworked `<Suspense>`, deterministic batching). The 1.9 mental model — components run once, signals are getters, don't destructure props — carries forward; don't adopt 2.0 APIs in production yet.
+
+## Sources
+
+- [Components: props (run-once, don't destructure, `mergeProps`/`splitProps`)](https://docs.solidjs.com/concepts/components/props)
+- [`createResource`](https://docs.solidjs.com/reference/basic-reactivity/create-resource)
+- [Stores / `createStore`](https://docs.solidjs.com/concepts/stores) · [`produce`](https://docs.solidjs.com/reference/store-utilities/produce) · [`reconcile`](https://docs.solidjs.com/reference/store-utilities/reconcile)
+- [`on`](https://docs.solidjs.com/reference/reactive-utilities/on) · [`untrack`](https://docs.solidjs.com/reference/reactive-utilities/untrack) · [`createEffect`](https://docs.solidjs.com/reference/basic-reactivity/create-effect)
+- [Solid 2.0 Beta announcement](https://github.com/solidjs/solid/discussions/2596)

@@ -1,0 +1,31 @@
+{
+  // Strict, modern baseline. Extend it: { "extends": "./tsconfig.base.json" }
+  // then set your own "include"/"outDir". Comments are JSONC — tsc reads them fine.
+  "compilerOptions": {
+    // --- Output target ---
+    "target": "ES2022",          // top-level await, class fields, Error.cause; bump as your runtime allows
+    "module": "NodeNext",        // honours package.json "type"/"exports"; use "Preserve" for bundlers (Vite/esbuild)
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022", "ESNext.Disposable"], // Disposable = types for `using`/`await using`; add "DOM" for browsers
+
+    // --- Strictness floor ---
+    "strict": true,              // the non-negotiable base (noImplicitAny, strictNullChecks, etc.)
+    "noUncheckedIndexedAccess": true,   // arr[i] / rec[k] become T | undefined — catches the #1 silent crash
+    "exactOptionalPropertyTypes": true, // `x?: T` cannot be explicitly assigned `undefined` — keeps "missing" vs "set to undefined" distinct
+    "noImplicitOverride": true,  // require `override` keyword so renamed base methods don't silently detach
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+
+    // --- Module hygiene ---
+    "verbatimModuleSyntax": true, // emit imports exactly as written; forces `import type` for type-only — no phantom runtime imports
+    "isolatedModules": true,      // each file transpiles alone — required by esbuild/swc/Babel single-file emit
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+
+    // --- Quality of life ---
+    "skipLibCheck": true,         // don't type-check .d.ts of deps; large speedup, low risk
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "sourceMap": true
+  }
+}

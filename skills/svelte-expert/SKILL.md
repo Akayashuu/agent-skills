@@ -66,17 +66,22 @@ Svelte 5 replaces compiler-magic reactivity with explicit **runes**. The mental 
   });
 </script>
 ```
+Use `$effect.pre(() => …)` (same API, runs *before* DOM updates) for the rare case of reading
+layout before a render — e.g. capturing scroll position for autoscroll.
 
 **Shared state — `.svelte.ts` module, not a store:**
 ```ts
 // counter.svelte.ts
-let count = $state(0);
+let count = $state(0);              // private: can't export a reassigned $state directly
 export const counter = {
-  get value() { return count; },
+  get value() { return count; },   // getter exposes the live reactive read
   inc() { count++; },
 };
 // any component: import { counter } — reactive across the app
 ```
+The compiler wraps reactivity per file, so a directly exported primitive `$state` won't
+stay reactive when reassigned elsewhere. Export an **object** (mutate its fields) or a
+**getter/function** API. See [`shared.svelte.ts`](./shared.svelte.ts) for both patterns.
 
 **Fine-grained reactivity:** `$state` returns a deep proxy. Mutate in place (`obj.field = x`, `arr.push(...)`) — reassigning the whole object is unnecessary and loses fine-grained tracking. Use `(item.id)` keys in `{#each}` so Svelte moves DOM nodes instead of recreating and remounting them.
 
@@ -84,7 +89,7 @@ export const counter = {
 
 - **`$:` / `export let` in new code** — Svelte 4 idioms; use `$derived` / `$props`.
 - **`$effect` to derive state** — causes extra passes and stale values; use `$derived`/`$derived.by`.
-- **Effect-driven loops** — an `$effect` that writes state it also reads. Read once with `untrack(() => …)` or restructure as `$derived`.
+- **Effect-driven loops** — an `$effect` that reads and writes the same `$state` loops infinitely. Prefer `$derived`; only if you *must* write state in an effect, read the looping dependency via `untrack(() => …)`.
 - **Writable store for component-local state** — use `$state`; reserve stores for cross-cutting concerns or external (RxJS) interop.
 - **Reassigning whole objects** — breaks fine-grained updates; mutate proxy fields directly.
 - **Unkeyed `{#each}`** — wrong DOM reuse on reorder; always provide `(item.id)`.
@@ -93,3 +98,11 @@ export const counter = {
 ## When NOT to over-engineer
 
 A small leaf component with one prop and no derived state needs no ceremony — `let { label } = $props()` is the whole story. Don't build a `.svelte.ts` store for state one component owns. Don't wrap `$derived` around a value used once inline. Runes are cheap; reach for shared modules and `$effect` only when something actually crosses component boundaries or touches the outside world.
+
+## Sources
+
+- [Runes — `$state`](https://svelte.dev/docs/svelte/$state) (incl. cross-module sharing gotcha)
+- [`$derived` / `$derived.by`](https://svelte.dev/docs/svelte/$derived)
+- [`$effect` / `$effect.pre`](https://svelte.dev/docs/svelte/$effect) ("when not to use", `untrack`)
+- [`$props` / `$bindable`](https://svelte.dev/docs/svelte/$props)
+- [Snippets — `{#snippet}` / `{@render}`](https://svelte.dev/docs/svelte/snippet) (slots deprecated)

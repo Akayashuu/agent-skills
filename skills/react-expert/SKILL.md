@@ -21,7 +21,7 @@ Idiomatic React is **derive, don't store; render, don't sequence.** Most state i
 | Avoid prop-drilling | composition (`children`) then context | one giant global context |
 | Expensive recompute / referential dep | `useMemo`/`useCallback` with a real reason | memoizing everything by default |
 | Form input | controlled, or uncontrolled + `ref` | mixing both on one field |
-| Read latest value in a callback | `ref` updated in render | widening effect deps to silence the linter |
+| Read latest props/state inside an Effect | `useEffectEvent` (stable in 19.2) | widening effect deps to silence the linter |
 
 ## Core Patterns
 
@@ -74,16 +74,28 @@ useEffect(() => {
 <Layout sidebar={<Avatar user={user} />} />
 ```
 
+**Separate non-reactive logic with `useEffectEvent` — don't lie to the deps array.** Stable since React 19.2: an Effect Event always sees the latest props/state but isn't reactive, so it stays *out* of the deps array — for fresh values an Effect shouldn't re-synchronize on:
+```tsx
+const onConnected = useEffectEvent(() => log('connected', theme)) // reads latest theme
+useEffect(() => {
+  const conn = createConnection(roomId)
+  conn.on('connected', onConnected)
+  conn.connect()
+  return () => conn.disconnect()
+}, [roomId]) // re-runs on roomId only; theme change does NOT reconnect
+```
+
 **Memoize for referential stability, not "speed."** A `useCallback`/`useMemo` matters when its result is a dependency of a memoized child or another hook — otherwise it's noise that adds its own cost:
 ```tsx
 const onSelect = useCallback((id: string) => dispatch(select(id)), [dispatch]) // stable prop for memo'd <Row>
 ```
+**React Compiler (1.0, stable Oct 2025) changes this calculus.** It auto-memoizes at build time, so with the compiler on you can delete most hand-written `useMemo`/`useCallback`/`React.memo`. Keep them only where it bails out (components that break the Rules of React). The compiler optimizes; it won't fix stored derived state or over-broad effect deps.
 
 ## Common Mistakes
 
 - **`useEffect` to compute derived data** — transform in render; effects are for syncing with the outside world.
 - **`key={index}`** — on reorder/insert, React reuses the wrong DOM/state. Use a stable id.
-- **Stale closures** — a callback captures the render's values; reading "latest" needs a `ref` or correct deps, not a lie to the deps array.
+- **Stale closures** — a callback captures the render's values; reading "latest" inside an Effect is what `useEffectEvent` is for — not a lie to the deps array.
 - **Over-broad or missing deps** — don't silence `react-hooks/exhaustive-deps`; fix the design (move logic out, use a ref, or a functional `setState(prev => …)`).
 - **`setState` during render** without a guard → infinite loop. Derive instead.
 - **Premature `memo`/`useMemo` everywhere** — measure first; memoization isn't free.
@@ -93,4 +105,14 @@ const onSelect = useCallback((id: string) => dispatch(select(id)), [dispatch]) /
 
 ## When NOT to over-engineer
 
-Local, cheap, self-contained UI state (a toggle, an input) needs no reducer, no context, no memo. Reach for `useReducer`, context splitting, or a data library when state is shared, complex, or async — not preemptively. In React 19, prefer the platform: `use` to unwrap promises/context, Actions + `useActionState` for form submission and pending UI, and Server Components to fetch on the server so the client ships less and avoids effect-based fetching entirely. Don't hand-roll what the framework now does.
+Local, cheap, self-contained UI state (a toggle, an input) needs no reducer, no context, no memo. Reach for `useReducer`, context splitting, or a data library when state is shared, complex, or async — not preemptively. In React 19 (stable), prefer the platform: `use` to unwrap promises/context, `<form>` Actions + `useActionState` for submission and pending UI, `useOptimistic` for optimistic updates, ref-as-prop (no more `forwardRef`), and Server Components to fetch on the server so the client ships less and avoids effect-based fetching entirely. Don't hand-roll what the framework now does.
+
+See `patterns.tsx` for compilable snippets: an abortable effect fetch done right, deriving state during render, and a correct `useEffectEvent`.
+
+## Sources
+
+- [You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect)
+- [Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects)
+- [Separating Events from Effects](https://react.dev/learn/separating-events-from-effects) · [`useEffectEvent`](https://react.dev/reference/react/useEffectEvent)
+- [React v19 (stable)](https://react.dev/blog/2024/12/05/react-19) · [React 19.2](https://react.dev/blog/2025/10/01/react-19-2)
+- [React Compiler v1.0](https://react.dev/blog/2025/10/07/react-compiler-1)

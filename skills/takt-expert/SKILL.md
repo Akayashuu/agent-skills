@@ -21,7 +21,7 @@ Takt is a privacy-friendly, ≤1 kB analytics client. `@vskstudio/takt-core` is 
 | Angular 17+ | `@vskstudio/takt-angular @vskstudio/takt-core` | `provideTakt({…})` + `inject(TaktService)` |
 | Astro | `@vskstudio/takt-astro @vskstudio/takt-core` | `integrations: [takt({ domain })]` |
 
-Core exports: `init`, `createTakt`, `track`, `pageview`, `optOut`, `optIn`, and types `Config`, `InitOptions`, `TrackOptions`.
+Core exports: `init`, `createTakt`, `track`, `pageview`, `optOut`, `optIn`, and types `Config`, `InitOptions`, `TrackOptions`, `Payload`, `Revenue`. (`InitOptions` = `Config` plus the autocapture toggles `auto`, `outbound`, `files`, `fileExtensions`.) Copy-paste setup for all six frameworks lives in [snippets.md](./snippets.md).
 
 ## Core Patterns
 
@@ -62,6 +62,18 @@ track('Signup', {
 - SSR-safe: touch `window`/`navigator` only after mount (`onMount`/mount effect/`isPlatformBrowser`); no-op on the server.
 - `useTakt()` (or service) returns a **never-throwing no-op** before mount / during SSR.
 - Pass config straight through to core; never reshape the payload or reimplement privacy/sampling.
-- Mirror core option names exactly (`domain`, `endpoint`, `outbound`, `files`, `spa`, `respectDnt`, `excludeLocalhost`).
+- Mirror core option names (`domain`, `endpoint`, `outbound`, `files`, `respectDnt`, `excludeLocalhost`); expose the SPA toggle as `spa` (it maps to core `init`'s `auto`, which gates the initial pageview + history patch).
 - Declare `@vskstudio/takt-core` (and the framework) as peer deps; ship ESM, tree-shakeable.
 - Offer the framework-agnostic `<takt-analytics>` custom element for non-framework pages.
+
+## Sources
+
+Public npm packages (latest confirmed: core/svelte `0.2.2`, astro `0.2.1`, react/vue/solid/angular `0.2.0`):
+
+- https://www.npmjs.com/package/@vskstudio/takt-core
+- https://www.npmjs.com/package/@vskstudio/takt-react
+- https://www.npmjs.com/package/@vskstudio/takt-vue
+- https://www.npmjs.com/package/@vskstudio/takt-svelte
+- https://www.npmjs.com/package/@vskstudio/takt-solid
+- https://www.npmjs.com/package/@vskstudio/takt-angular
+- https://www.npmjs.com/package/@vskstudio/takt-astro
