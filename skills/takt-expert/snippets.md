@@ -225,3 +225,108 @@ import Takt from '@vskstudio/takt-astro/Takt.astro'
 ```
 
 Astro tracks `astro:after-swap` (View Transitions) instead of core's history patch, so it counts each navigation exactly once. Custom events: `import { track } from '@vskstudio/takt-astro'`. The Astro `files` option is boolean only (no extension array).
+
+## PHP (Laravel / Symfony / core)
+
+The PHP wrappers render the client snippet server-side AND send server-to-server
+(S2S) events. S2S needs an **ingest-scoped API key bound to the domain** — keep it
+server-side only. `Revenue` amount is a decimal STRING, currency a 3-letter code.
+The PHP snippet always tracks SPA navigation and respects Do-Not-Track (no toggles);
+delivery `mode` is `inline` (default), `cdn`, or `asset`.
+
+### Laravel
+
+```bash
+composer require vskstudio/takt-laravel
+```
+
+Auto-discovered. Env-driven config (`php artisan vendor:publish --tag=takt-config`):
+`TAKT_DOMAIN`, `TAKT_ENDPOINT`, `TAKT_API_KEY`, `TAKT_MODE`, `TAKT_OUTBOUND`,
+`TAKT_FILES`, `TAKT_EXCLUDE_LOCALHOST`.
+
+```blade
+{{-- layout <head> --}}
+<head>
+    @takt
+</head>
+```
+
+```php
+use Vskstudio\Takt\Laravel\Facades\Takt;
+use Vskstudio\Takt\Revenue;
+
+// S2S — auto-attributed to the current request's IP + User-Agent
+Takt::event('Signup', ['plan' => 'pro'], new Revenue('29.00', 'EUR'));
+Takt::pageview();
+```
+
+### Symfony
+
+```bash
+composer require vskstudio/takt-symfony
+```
+
+Flex enables the bundle automatically. `config/packages/takt.yaml`:
+
+```yaml
+takt:
+  domain: 'example.com'
+  endpoint: 'https://takt.example.com'
+  api_key: '%env(TAKT_API_KEY)%'
+  mode: 'inline'   # inline | cdn | asset
+  outbound: false
+  files: false
+  exclude_localhost: true
+```
+
+```twig
+<head>
+    {{ takt() }}
+</head>
+```
+
+```php
+use Vskstudio\Takt\Revenue;
+use Vskstudio\Takt\Takt;
+
+final class CheckoutController
+{
+    public function __construct(private readonly Takt $takt) {}
+
+    public function complete(): Response
+    {
+        // autowired Takt is bound to the current request (IP + User-Agent)
+        $this->takt->event('Signup', ['plan' => 'pro'], new Revenue('29.00', 'EUR'));
+    }
+}
+```
+
+### Core (framework-agnostic)
+
+```bash
+composer require vskstudio/takt-core-php
+```
+
+```php
+use Vskstudio\Takt\SnippetRenderer;
+use Vskstudio\Takt\Options;
+use Vskstudio\Takt\Mode;
+
+// render the snippet into <head>
+echo (new SnippetRenderer(new Options(
+    domain: 'example.com', outbound: true, files: true, mode: Mode::Inline,
+)))->render();
+```
+
+```php
+use Vskstudio\Takt\Takt;
+use Vskstudio\Takt\Revenue;
+
+// S2S — forward the end-user's IP/UA so events attribute to the visitor
+(new Takt($endpoint, 'example.com', $apiKey))
+    ->withVisitor($ip, $userAgent)
+    ->event('Signup', ['plan' => 'pro'], new Revenue('29.00', 'EUR'));
+```
+
+PSR-18/PSR-17 transports are auto-discovered (`php-http/discovery`); inject your own
+if you prefer. Fire-and-forget by default — `->strict()` throws on failure (tests).

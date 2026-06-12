@@ -35,3 +35,30 @@ jobs:
       - name: Type-check / compile skill code artifacts
         working-directory: tests
         run: node run.mjs
+
+  php-lint:
+    name: Lint PHP skill examples
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout@v4.2.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      # shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.1'
+
+      - name: Syntax-check skill .php examples
+        run: |
+          set -euo pipefail
+          found=0
+          while IFS= read -r -d '' file; do
+            found=1
+            php -l "$file"
+          done < <(find skills -path '*/examples/*.php' -print0)
+          if [ "$found" -eq 0 ]; then
+            echo "No PHP examples found" >&2
+            exit 1
+          fi
