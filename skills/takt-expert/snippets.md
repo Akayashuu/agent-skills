@@ -5,6 +5,8 @@ Verified against each wrapper's published README/API. Every wrapper lists
 (`spa`/`respectDnt`/`excludeLocalhost`) are `true`; pass `excludeLocalhost={false}`
 (or the framework equivalent) during local dev or you will see no events.
 
+> Full runnable apps (one per framework, each builds in CI): [vskstudio/takt-examples](https://github.com/vskstudio/takt-examples).
+
 ## Core (any / no framework)
 
 ```bash
