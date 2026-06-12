@@ -1,0 +1,24 @@
+{
+  "name": "agent-skills-tests",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Self-contained type-check harness for skill code artifacts.",
+  "scripts": {
+    "check": "node run.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "@types/react": "^19.0.8",
+    "vue": "^3.5.13",
+    "svelte": "^5.19.0",
+    "solid-js": "^1.9.4",
+    "@angular/core": "^20.0.0",
+    "@angular/common": "^20.0.0",
+    "@angular/router": "^20.0.0",
+    "rxjs": "^7.8.1",
+    "zone.js": "^0.15.0",
+    "astro": "^5.1.9",
+    "zod": "^3.24.1"
+  }
+}

@@ -17,7 +17,18 @@ Each skill is a concise, scannable reference of *idiomatic, modern best practice
 | [`astro-expert`](skills/astro-expert/SKILL.md) | Building Astro — islands, client directives, content collections, View Transitions |
 | [`takt-expert`](skills/takt-expert/SKILL.md) | Integrating [Takt](https://www.npmjs.com/package/@vskstudio/takt-core) analytics or authoring a `@vskstudio/takt-*` wrapper |
 
-## Install
+## Install as a Claude Code plugin
+
+Add this repo as a plugin marketplace, then install the plugin to get all 8 skills at once:
+
+```
+/plugin marketplace add Akayashuu/agent-skills
+/plugin install agent-skills@agent-skills
+```
+
+Skills are discovered automatically and load on demand when a task matches their `description`. Update later with `/plugin marketplace update agent-skills`.
+
+## Install manually
 
 Copy the skills you want into your agent's skills directory:
 

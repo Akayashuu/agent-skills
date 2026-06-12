@@ -1,0 +1,20 @@
+{
+  "name": "agent-skills",
+  "version": "0.1.0",
+  "description": "Framework and language expert skills (TypeScript, React, Vue, Svelte, SolidJS, Angular, Astro, Takt) that load on demand to enforce idiomatic, modern best practices.",
+  "author": {
+    "name": "Akayashuu"
+  },
+  "homepage": "https://github.com/Akayashuu/agent-skills",
+  "license": "MIT",
+  "keywords": [
+    "skills",
+    "typescript",
+    "react",
+    "vue",
+    "svelte",
+    "solidjs",
+    "angular",
+    "astro"
+  ]
+}

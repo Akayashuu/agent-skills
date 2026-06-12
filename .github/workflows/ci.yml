@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate skills and type-check artifacts
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout@v4.2.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      # actions/setup-node@v4.1.0
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10
+
+      - name: Validate SKILL.md frontmatter and JSON files
+        run: node scripts/validate-skills.mjs
+
+      - name: Install harness dependencies
+        working-directory: tests
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check / compile skill code artifacts
+        working-directory: tests
+        run: node run.mjs
