@@ -62,3 +62,57 @@ jobs:
             echo "No PHP examples found" >&2
             exit 1
           fi
+
+  go-lint:
+    name: Compile Go skill examples
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout@v4.2.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      # actions/setup-go@v5.0.2
+      - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32
+        with:
+          go-version: '1.22'
+
+      - name: Build each Go example as its own package
+        run: |
+          set -euo pipefail
+          found=0
+          while IFS= read -r -d '' file; do
+            found=1
+            dir=$(mktemp -d)
+            cp "$file" "$dir/main.go"
+            ( cd "$dir" && go mod init example >/dev/null 2>&1 && go build ./... )
+            rm -rf "$dir"
+          done < <(find skills -path '*/examples/*.go' -print0)
+          if [ "$found" -eq 0 ]; then
+            echo "No Go examples found" >&2
+            exit 1
+          fi
+
+  rust-lint:
+    name: Type-check Rust skill examples
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout@v4.2.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Type-check each Rust example as a library crate
+        run: |
+          set -euo pipefail
+          found=0
+          while IFS= read -r -d '' file; do
+            found=1
+            out=$(mktemp)
+            rustc --edition 2021 --crate-type lib --emit=metadata -o "$out" "$file"
+            rm -f "$out"
+          done < <(find skills -path '*/examples/*.rs' -print0)
+          if [ "$found" -eq 0 ]; then
+            echo "No Rust examples found" >&2
+            exit 1
+          fi
