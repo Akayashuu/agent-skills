@@ -29,10 +29,10 @@ Add this repo as a plugin marketplace, then install the plugin to get all 14 ski
 
 ```
 /plugin marketplace add Akayashuu/agent-skills
-/plugin install agent-skills@agent-skills
+/plugin install agent-skills@expert-skills
 ```
 
-Skills are discovered automatically and load on demand when a task matches their `description`. Update later with `/plugin marketplace update agent-skills`.
+Skills are discovered automatically and load on demand when a task matches their `description`. Update later with `/plugin marketplace update expert-skills`.
 
 ## Install manually
 
