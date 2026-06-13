@@ -108,7 +108,9 @@ jobs:
           found=0
           while IFS= read -r -d '' file; do
             found=1
-            rustc --edition 2021 --crate-type lib --emit=metadata -o /dev/null "$file"
+            out=$(mktemp)
+            rustc --edition 2021 --crate-type lib --emit=metadata -o "$out" "$file"
+            rm -f "$out"
           done < <(find skills -path '*/examples/*.rs' -print0)
           if [ "$found" -eq 0 ]; then
             echo "No Rust examples found" >&2
