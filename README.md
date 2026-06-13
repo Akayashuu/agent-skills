@@ -15,11 +15,17 @@ Each skill is a concise, scannable reference of *idiomatic, modern best practice
 | [`solid-expert`](skills/solid-expert/SKILL.md) | Writing SolidJS — signals, fine-grained reactivity, props (don't destructure!), stores |
 | [`angular-expert`](skills/angular-expert/SKILL.md) | Writing Angular — standalone components, signals, `inject()`, new control flow, RxJS teardown |
 | [`astro-expert`](skills/astro-expert/SKILL.md) | Building Astro — islands, client directives, content collections, View Transitions |
+| [`php-expert`](skills/php-expert/SKILL.md) | Writing/reviewing PHP 8.1+ — enums & readonly value objects, `match` over `switch`, exceptions vs result types, PSR interfaces & Composer autoloading, PHPStan types |
+| [`laravel-expert`](skills/laravel-expert/SKILL.md) | Building Laravel apps/packages — service providers, container bindings, Eloquent/N+1, form requests, queued jobs, events, facades vs DI, Testbench/Pest |
+| [`symfony-expert`](skills/symfony-expert/SKILL.md) | Building Symfony 6.4/7.x apps/bundles — DI container (autowiring, tags, `#[Autowire]`, compiler passes), bundle Extension/Configuration, attribute routing, Twig, HttpClient, Flex |
 | [`takt-expert`](skills/takt-expert/SKILL.md) | Integrating [Takt](https://www.npmjs.com/package/@vskstudio/takt-core) analytics or authoring a `@vskstudio/takt-*` wrapper |
+| [`go-expert`](skills/go-expert/SKILL.md) | Writing Go — error wrapping (`errors.Is/As`, `%w`), goroutine/context cancellation & leaks, consumer-side interfaces, useful zero values, generics restraint |
+| [`rust-expert`](skills/rust-expert/SKILL.md) | Writing Rust — ownership vs reflexive `clone()`, `Result`/`?` & thiserror/anyhow, avoiding `unwrap()`, generics vs `dyn`, isolating `unsafe` |
+| [`pr-finisher`](skills/pr-finisher/SKILL.md) | Finalizing a PR — verification, diff hygiene, quality + architecture conformance, security, breaking changes/migrations, perf/a11y, docs, PR message |
 
 ## Install as a Claude Code plugin
 
-Add this repo as a plugin marketplace, then install the plugin to get all 8 skills at once:
+Add this repo as a plugin marketplace, then install the plugin to get all 14 skills at once:
 
 ```
 /plugin marketplace add Akayashuu/agent-skills
