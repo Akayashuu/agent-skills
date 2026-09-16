@@ -22,10 +22,11 @@ Each skill is a concise, scannable reference of *idiomatic, modern best practice
 | [`go-expert`](skills/go-expert/SKILL.md) | Writing Go — error wrapping (`errors.Is/As`, `%w`), goroutine/context cancellation & leaks, consumer-side interfaces, useful zero values, generics restraint |
 | [`rust-expert`](skills/rust-expert/SKILL.md) | Writing Rust — ownership vs reflexive `clone()`, `Result`/`?` & thiserror/anyhow, avoiding `unwrap()`, generics vs `dyn`, isolating `unsafe` |
 | [`pr-finisher`](skills/pr-finisher/SKILL.md) | Finalizing a PR — verification, diff hygiene, quality + architecture conformance, security, breaking changes/migrations, perf/a11y, docs, PR message |
+| [`audit-fr`](skills/audit-fr/SKILL.md) | Reviewing a French-facing site before launch: bugs, limited surface pentest, LCEN, RGPD/cookies, consumer law, RGAA/EAA, technical SEO |
 
 ## Install as a Claude Code plugin
 
-Add this repo as a plugin marketplace, then install the plugin to get all 14 skills at once:
+Add this repo as a plugin marketplace, then install the plugin to get all 15 skills at once:
 
 ```
 /plugin marketplace add Akayashuu/agent-skills
