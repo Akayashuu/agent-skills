@@ -253,6 +253,22 @@ runTsc('angular-expert', {
   }
 }
 
+// audit-fr: offline probe unit tests (stdlib Python, no network).
+{
+  try {
+    execFileSync('python3', ['scripts/test_probe.py'], {
+      cwd: A('audit-fr'),
+      stdio: 'pipe',
+      encoding: 'utf8',
+      timeout: 30000,
+    });
+    record('audit-fr', 'PASS', 'python3 scripts/test_probe.py (offline)');
+  } catch (e) {
+    const out = `${e.stdout || ''}${e.stderr || ''}`.trim();
+    record('audit-fr', 'FAIL', out.split('\n').slice(0, 12).join('\n      '));
+  }
+}
+
 rmSync(work, { recursive: true, force: true });
 
 const failed = results.filter((r) => r.status === 'FAIL');

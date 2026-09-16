@@ -1,7 +1,7 @@
 {
   "name": "agent-skills",
   "version": "0.1.0",
-  "description": "Framework and language expert skills (TypeScript, React, Vue, Svelte, SolidJS, Angular, Astro, PHP, Laravel, Symfony, Takt, Go, Rust) plus a PR-finishing skill — all loading on demand to enforce idiomatic, modern best practices.",
+  "description": "Framework and language expert skills (TypeScript, React, Vue, Svelte, SolidJS, Angular, Astro, PHP, Laravel, Symfony, Takt, Go, Rust), a PR-finishing skill, and a French-web audit skill. Skills load on demand to enforce idiomatic, modern best practices.",
   "author": {
     "name": "Akayashuu"
   },
@@ -20,6 +20,9 @@
     "laravel",
     "symfony",
     "go",
-    "rust"
+    "rust",
+    "audit",
+    "rgpd",
+    "seo"
   ]
 }

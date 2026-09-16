@@ -2,3 +2,5 @@ node_modules/
 tests/node_modules/
 tests/.work/
 *.tsbuildinfo
+__pycache__/
+*.pyc
